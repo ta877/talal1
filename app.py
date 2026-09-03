@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image
-from google import genai
+import google.generativeai as genai
 
 st.set_page_config(page_title="Smart Glasses HUD", page_icon="🕶️", layout="centered")
 
@@ -16,12 +16,10 @@ def analyze_image(pil_img, prompt_text):
         st.error("⚠️ يرجى إدخال مفتاح الـ API أولاً.")
         return
     try:
-        client = genai.Client(api_key=api_key)
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         with st.spinner("🧠 جاري التحليل عبر Gemini..."):
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[pil_img, prompt_text]
-            )
+            response = model.generate_content([prompt_text, pil_img])
             st.success("✅ تم التحليل بنجاح!")
             st.markdown("### 🖥️ شاشة النظارة (HUD)")
             st.info(response.text)
