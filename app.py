@@ -1,56 +1,68 @@
 import streamlit as st
 from PIL import Image
 import google.generativeai as genai
+import os
 
-st.set_page_config(page_title="Smart Glasses HUD", page_icon="🕶️", layout="centered")
+# إعداد الصفحة
+st.set_page_config(page_title="AI HUD", layout="centered")
 
-st.title("🕶️ نظام النظارة الذكية (HUD)")
-st.caption("أدخل مفتاح API، ثم التقط صورة من كاميرا الآيفون للتحليل الفوري")
+st.title("نظام HUD الذكي")
 
-api_key = st.text_input("مفتاح Google Gemini API Key:", type="password")
+# تهيئة مفتاح API
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    api_key = st.text_input("أدخل مفتاح Gemini API Key:", type="password")
 
-picture = st.camera_input("📸 التقاط صورة من الكاميرا")
+if api_key:
+    genai.configure(api_key=api_key)
 
-def analyze_image(pil_img, prompt_text):
-    if not api_key:
-        st.error("⚠️ يرجى إدخال مفتاح الـ API أولاً.")
-        return
-    try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        with st.spinner("🧠 جاري التحليل عبر Gemini..."):
-            response = model.generate_content([prompt_text, pil_img])
-            st.success("✅ تم التحليل بنجاح!")
-            st.markdown("### 🖥️ شاشة النظارة (HUD)")
-            st.info(response.text)
-    except Exception as e:
-        st.error(f"❌ حدث خطأ: {str(e)}")
+# خيار التبديل بين الكاميرا الأمامية والخلفية
+camera_side = st.radio("اختر الكاميرا:", ("الأمامية (Selfie)", "الخلفية (Environment)"), horizontal=True)
+facing_mode = "user" if camera_side == "الأمامية (Selfie)" else "environment"
 
-if picture and api_key:
-    pil_img = Image.open(picture)
+# التقاط الصورة
+img_file_buffer = st.camera_input("التقط صورة", key="camera")
 
-    st.subheader("إصدار الأوامر والأنماط:")
+if img_file_buffer is not None:
+    image = Image.open(img_file_buffer)
+    
+    st.markdown("### :إصدار الأوامر والأنماط")
     
     col1, col2 = st.columns(2)
-
+    
+    prompt = ""
     with col1:
-        if st.button("1️⃣ تحليل الأشياء التي أمامي", use_container_width=True):
-            prompt = "أنت محرك نظارة ذكية HUD. حلل الصورة وتعرف فوراً على أهم الأشياء والعناصر الموجودة أمام الكاميرا باختصار شديد في نقاط."
-            analyze_image(pil_img, prompt)
-
-        if st.button("3️⃣ رادار الأفراد والمواقع", use_container_width=True):
-            prompt = "أنت نظام رادار لنظارة ذكية HUD. رصد الأشخاص في المشهد، عددهم، مواقعهم (يمين/يسار/قريب)، ونشاطهم باختصار شديد."
-            analyze_image(pil_img, prompt)
-
-        if st.button("5️⃣ موسوعة ومعلومات الشيء", use_container_width=True):
-            prompt = "أنت موسوعة معرفية لنظارة ذكية HUD. تعرف على الشيء الرئيسي المكتشف واذكر اسمه، استخدامه، ومعلومة قيمة عنه باختصار."
-            analyze_image(pil_img, prompt)
+        if st.button("1 تحليل الأشياء التي أمامي"):
+            prompt = "صف لي ما تراه في هذه الصورة بدقة واذكر أهم العناصر الظاهرة."
+        if st.button("3 رادار الأفراد والمواقع"):
+            prompt = "تعرف على الأشخاص والمواقع أو الأماكن الموجودة في الصورة."
+        if st.button("5 موسوعة ومعلومات الشيء"):
+            prompt = "قدّم معلومات مفصلة وموسوعية عن المكون الرئيسي في الصورة."
 
     with col2:
-        if st.button("2️⃣ تحليل نفسي ولغة الجسد", use_container_width=True):
-            prompt = "أنت خبير لغة جسد لنظارة ذكية HUD. حلل الأشخاص نفسياً بناءً على تعبيرات الوجه ولغة الجسد (المزاج والانطباع) باختصار شديد."
-            analyze_image(pil_img, prompt)
+        if st.button("2 تحليل نفسي ولغة الجسد"):
+            prompt = "حلل لغة الجسد والانفعالات الظاهرة للأشخاص في الصورة."
+        if st.button("4 كاشف العوائق والمخاطر"):
+            prompt = "حدد أي عوائق أو مخاطر أو تنبيهات مهمة في المشهد."
 
-        if st.button("4️⃣ كاشف العوائق والمخاطر", use_container_width=True):
-            prompt = "أنت نظام سلامة لنظارة ذكية HUD. امسح الطريق وحدد أي عائق أو خطر قريب يسبب التعثر أو الاصطدام، واكتب التنبيه فوراً وبسطرين."
-            analyze_image(pil_img, prompt)
+    if prompt:
+        if not api_key:
+            st.error("يرجى إدخال مفتاح GEMINI_API_KEY أولاً.")
+        else:
+            try:
+                with st.spinner("جاري التحليل..."):
+                    # استخدام النموذج الأحدث المعتمد
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    response = model.generate_content([prompt, image])
+                    st.success("تم التحليل بنجاح!")
+                    st.write(response.text)
+            except Exception as e:
+                # خطة احتياطية في حال تعذر النموذج الأول
+                try:
+                    with st.spinner("جاري المحاولة بالنموذج البديل..."):
+                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        response = model.generate_content([prompt, image])
+                        st.success("تم التحليل بنجاح!")
+                        st.write(response.text)
+                except Exception as ex:
+                    st.error(f"حدث خطأ: {ex}")
