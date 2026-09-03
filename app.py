@@ -41,7 +41,11 @@ if img_file_buffer is not None:
             genai.configure(api_key=api_key)
             try:
                 with st.spinner("جاري التحليل..."):
-                    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                    # اختيار أول موديل يدعم الرؤية والتحليل تلقائياً
+                    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    chosen_model = available_models[0] if available_models else 'gemini-pro-vision'
+                    
+                    model = genai.GenerativeModel(chosen_model)
                     response = model.generate_content([prompt, image])
                     st.success("تم التحليل بنجاح!")
                     st.write(response.text)
