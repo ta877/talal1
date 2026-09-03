@@ -3,31 +3,20 @@ from PIL import Image
 import google.generativeai as genai
 import os
 
-# إعداد الصفحة
 st.set_page_config(page_title="AI HUD", layout="centered")
+st.title("نظام النظارة (HUD) الذكية")
 
-st.title("نظام HUD الذكي")
-
-# تهيئة مفتاح API
+# تهيئة المفتاح
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
-    api_key = st.text_input("أدخل مفتاح Gemini API Key:", type="password")
+    api_key = st.text_input("أدخل مفتاح Google Gemini API Key:", type="password")
 
-if api_key:
-    genai.configure(api_key=api_key)
-
-# خيار التبديل بين الكاميرا الأمامية والخلفية
-camera_side = st.radio("اختر الكاميرا:", ("الأمامية (Selfie)", "الخلفية (Environment)"), horizontal=True)
-facing_mode = "user" if camera_side == "الأمامية (Selfie)" else "environment"
-
-# التقاط الصورة
-img_file_buffer = st.camera_input("التقط صورة", key="camera")
+img_file_buffer = st.camera_input("التقاط صورة من الكاميرا", key="camera")
 
 if img_file_buffer is not None:
     image = Image.open(img_file_buffer)
     
     st.markdown("### :إصدار الأوامر والأنماط")
-    
     col1, col2 = st.columns(2)
     
     prompt = ""
@@ -49,20 +38,12 @@ if img_file_buffer is not None:
         if not api_key:
             st.error("يرجى إدخال مفتاح GEMINI_API_KEY أولاً.")
         else:
+            genai.configure(api_key=api_key)
             try:
                 with st.spinner("جاري التحليل..."):
-                    # استخدام النموذج الأحدث المعتمد
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-1.5-flash-latest')
                     response = model.generate_content([prompt, image])
                     st.success("تم التحليل بنجاح!")
                     st.write(response.text)
             except Exception as e:
-                # خطة احتياطية في حال تعذر النموذج الأول
-                try:
-                    with st.spinner("جاري المحاولة بالنموذج البديل..."):
-                        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                        response = model.generate_content([prompt, image])
-                        st.success("تم التحليل بنجاح!")
-                        st.write(response.text)
-                except Exception as ex:
-                    st.error(f"حدث خطأ: {ex}")
+                st.error(f"حدث خطأ: {e}")
