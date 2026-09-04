@@ -4,7 +4,7 @@ import google.generativeai as genai
 
 # تكبير الشاشة لتستغل المساحة الكاملة للمتصفح
 st.set_page_config(
-    page_title="AR HUD Live Camera", page_icon="👓", layout="wide"
+    page_title="AR HUD Smart Glasses", page_icon="👓", layout="wide"
 )
 
 st.markdown(
@@ -18,7 +18,7 @@ st.markdown(
         background: linear-gradient(135deg, rgba(13, 27, 42, 0.9), rgba(20, 35, 60, 0.8));
         border: 2px solid #1e90ff;
         border-radius: 16px;
-        padding: 20px;
+        padding: 22px;
         color: #ffffff;
         font-family: 'Courier New', Courier, monospace;
         box-shadow: 0 0 25px rgba(30, 144, 255, 0.4);
@@ -40,7 +40,7 @@ st.markdown(
     }
     .hud-content {
         font-size: 16px;
-        line-height: 1.5;
+        line-height: 1.7;
         color: #e0f7ff;
         white-space: pre-wrap;
     }
@@ -56,8 +56,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة لعرض التحليل المختصر داخل النظارة.")
+st.title("👓 AR HUD Smart Glasses")
+st.write("اختر وضع التحليل من القائمة، ثم التقط الصورة ليظهر في واجهة النظارة.")
 
 # جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
@@ -70,6 +70,18 @@ if not api_key:
 
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
+
+# قائمة الخيارات المتقدمة للنظارة
+hud_mode = st.selectbox(
+    "اختر وضع نظام النظارة:",
+    [
+        "1. تحليل نفسي وشخصي",
+        "2. شرح الأشياء المحيطة",
+        "3. إظهار عوائق الطريق والمخاطر",
+        "4. كشف الأشخاص (نظام رادار)",
+        "5. معرفة موديل المركبة ونوعها ولونها"
+    ]
+)
 
 image_file = st.camera_input("التقط صورة بالكاميرا")
 
@@ -87,27 +99,38 @@ if image_file and api_key:
             }
         ]
 
-        with st.spinner("جاري التحليل..."):
-            # برومبت صارم جداً يمنع التفاصيل الطويلة ويخليه سطر واحد مركز
-            prompt = (
-                "أعطني تحليلاً مختصراً جداً من سطر واحد فقط (مثال: المزاج: هادئ | البيئة: غرفة داخلية). "
-                "لا تكتب فقرات طويلة أبداً، فقط كلمات مركزة ومختصرة جداً لتظهر في شاشة نظارة ذكية."
-            )
+        # تخصيص البرومبت بناءً على الخيار اللي اختاره
+        if "1." in hud_mode:
+            prompt = "قم بتحليل الشخص في الصورة تحليلاً نفسياً وسلوكياً سريعاً في نقطتين أو ثلاث مختصرة جداً."
+            mode_title = "PSYCHOLOGICAL SCANNER"
+        elif "2." in hud_mode:
+            prompt = "اشرح أهم الأشياء والمعالم الظاهرة في الصورة باختصار شديد في سطرين."
+            mode_title = "OBJECT EXPLAINER"
+        elif "3." in hud_mode:
+            prompt = "حدد أي عوائق أو مخاطر محتملة في طريق أو محيط الصورة بشكل تحذيري مختصر."
+            mode_title = "HAZARD & OBSTACLE DETECTOR"
+        elif "4." in hud_mode:
+            prompt = "اكشف عن وجود الأشخاص في الصورة وعددهم ومواقعهم كأنك نظام رادار بأسلوب مختصر."
+            mode_title = "RADAR / PEOPLE TRACKER"
+        else:
+            prompt = "إذا كانت هناك سيارة أو مركبة في الصورة، حدد موديلها ونوعها ولونها ولوحتها بدقة. إذا لم توجد قل لا توجد مركبة."
+            mode_title = "VEHICLE RECOGNITION HUD"
 
+        with st.spinner("جاري معالجة نظام النظارة..."):
             response = model.generate_content([image_parts[0], prompt])
 
             st.markdown(
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>HUD SCANNER / ACTIVE</span>
-                        <span>10:42 AM 🔋</span>
+                        <span>{mode_title}</span>
+                        <span>10:56 AM 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        STATUS: OK [LOCKED]
+                        STATUS: ACTIVE [OK]
                     </div>
                 </div>
                 """,
