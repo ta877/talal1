@@ -74,19 +74,15 @@ if not api_key:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    # تحديث أسماء النماذج لتكون متوافقة ومتاحة
-    model_choice = st.selectbox(
-        "اختر نموذج Gemini:",
-        ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
-        index=0,
-    )
+    # التقاط الصورة مباشرة بدون زحمة خيارات النماذج
     image_file = st.camera_input("التقط صورة بالكاميرا")
 
 with col2:
     if image_file and api_key:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_choice)
+            # استخدام النموذج الأقر والجاهز لمعالجة الصور مباشرة
+            model = genai.GenerativeModel("gemini-1.5-flash")
             
             bytes_data = image_file.getvalue()
             image_parts = [
