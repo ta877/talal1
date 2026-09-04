@@ -1,20 +1,18 @@
 import os
-import streamlit as str_lit
-from google import genai
-from google.genai import types
+import streamlit as st
+import google.generativeai as genai
 
-# 1. تكبير الشاشة لتستغل المساحة الكاملة للمتصفح باستخدام layout="wide"
-str_lit.set_page_config(
+# تكبير الشاشة لتستغل المساحة الكاملة للمتصفح
+st.set_page_config(
     page_title="AR HUD Live Camera", page_icon="👓", layout="wide"
 )
 
-str_lit.markdown(
+st.markdown(
     """
     <style>
     .stApp {
         background-color: #0b0e14;
     }
-    /* جعل واجهة النظارة تاخذ عرض أكبر وأوسع على الشاشة */
     .hud-container {
         position: relative;
         background: linear-gradient(135deg, rgba(13, 27, 42, 0.9), rgba(20, 35, 60, 0.8));
@@ -58,52 +56,50 @@ str_lit.markdown(
     unsafe_allow_html=True,
 )
 
-str_lit.title("👓 AR HUD Live Camera")
-str_lit.write("التقط صورة بالكاميرا ليظهر التحليل بشكل عريض وواضح داخل واجهة النظارة.")
+st.title("👓 AR HUD Live Camera")
+st.write("التقط صورة بالكاميرا ليظهر التحليل بشكل عريض وواضح داخل واجهة النظارة.")
 
 # إدخال مفتاح الـ API
-api_key = str_lit.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    api_key = str_lit.text_input("أدخل مفتاح Gemini API:", type="password")
+    api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
 
-# استخدام أعمدة لتنظيم الشاشة العريضة (مثلاً قسم للإعدادات والكاميرا وقسم للنتيجة)
-col1, col2 = str_lit.columns([1, 1])
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    model_choice = str_lit.selectbox(
+    model_choice = st.selectbox(
         "اختر نموذج Gemini:",
         ["gemini-2.5-flash", "gemini-2.5-pro"],
         index=0,
     )
-    image_file = str_lit.camera_input("التقط صورة بالكاميرا")
+    image_file = st.camera_input("التقط صورة بالكاميرا")
 
 with col2:
     if image_file and api_key:
         try:
-            client = genai.Client(api_key=api_key)
-            image_bytes = image_file.getvalue()
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(model_choice)
+            
+            # قراءة الصورة لإرسالها للنموذج
+            bytes_data = image_file.getvalue()
+            image_parts = [
+                {
+                    "mime_type": "image/jpeg",
+                    "data": bytes_data
+                }
+            ]
 
-            with str_lit.spinner("جاري التحليل وعرض البيانات..."):
+            with st.spinner("جاري التحليل وعرض البيانات..."):
                 prompt = (
                     "قم بتحليل الصورة بدقة تامة. أخرج النتيجة بشكل تعداد مختصر ونظيف جداً "
                     "(مثال: 1. [اسم العنصر] — [العدد أو الوصف]). "
                     "ممنوع نهائياً كتابة مقدمات أو شرح طويل، فقط العناصر والنتيجة مباشرة."
                 )
 
-                response = client.models.generate_content(
-                    model=model_choice,
-                    contents=[
-                        types.Part.from_bytes(
-                            data=image_bytes,
-                            mime_type="image/jpeg",
-                        ),
-                        prompt,
-                    ],
-                )
+                response = model.generate_content([image_parts[0], prompt])
 
-                # عرض النتائج في شاشة النظارة العريضة
-                str_lit.markdown(
+                st.markdown(
                     f"""
                     <div class="hud-container">
                         <div class="hud-header">
@@ -122,7 +118,7 @@ with col2:
                 )
 
         except Exception as e:
-            str_lit.error(f"حدث خطأ أثناء المعالجة: {e}")
+            st.error(f"حدث خطأ أثناء المعالجة: {e}")
 
     elif not api_key and (image_file is not None):
-        str_lit.warning("الرجاء إدخال مفتاح Gemini API للمتابعة.")
+        st.warning("الرجاء إدخال مفتاح Gemini API للمتابعة.")
