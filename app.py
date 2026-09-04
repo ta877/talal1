@@ -4,7 +4,6 @@ import google.generativeai as genai
 from PIL import Image
 import io
 
-# تكبير الشاشة لتستغل المساحة الكاملة للمتصفح
 st.set_page_config(
     page_title="AR HUD Smart Glasses", page_icon="👓", layout="wide"
 )
@@ -17,13 +16,13 @@ st.markdown(
     }
     .hud-container {
         position: relative;
-        background: linear-gradient(135deg, rgba(13, 27, 42, 0.9), rgba(20, 35, 60, 0.8));
+        background: linear-gradient(135deg, rgba(13, 27, 42, 0.95), rgba(20, 35, 60, 0.85));
         border: 2px solid #1e90ff;
         border-radius: 16px;
         padding: 22px;
         color: #ffffff;
         font-family: 'Courier New', Courier, monospace;
-        box-shadow: 0 0 25px rgba(30, 144, 255, 0.4);
+        box-shadow: 0 0 30px rgba(30, 144, 255, 0.5);
         margin-top: 15px;
         margin-bottom: 15px;
         width: 100%;
@@ -36,7 +35,7 @@ st.markdown(
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1.5px;
-        border-bottom: 1px solid rgba(30, 144, 255, 0.3);
+        border-bottom: 1px solid rgba(30, 144, 255, 0.4);
         padding-bottom: 6px;
         margin-bottom: 12px;
     }
@@ -58,12 +57,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("👓 AR HUD Smart Glasses (Turbo)")
-st.write("وضع السرعة القصوى: اختر الوضع والتقط الصورة لتحليل فوري.")
+st.title("👓 AR HUD Smart Glasses")
+st.write("نظام النظارة الذكية: التقط الصورة وسيظهر التحليل فوراً.")
 
-# جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
-
 if not api_key:
     try:
         api_key = st.secrets.get("GEMINI_API_KEY")
@@ -73,80 +70,75 @@ if not api_key:
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
 
-hud_mode = st.selectbox(
-    "اختر وضع نظام النظارة:",
-    [
-        "1. تحليل نفسي وشخصي",
-        "2. شرح الأشياء المحيطة",
-        "3. إظهار عوائق الطريق والمخاطر",
-        "4. كشف الأشخاص (نظام رادار)",
-        "5. معرفة موديل المركبة ونوعها ولونها"
-    ]
-)
+hud_mode = st.selectbox("اختر وضع نظام النظارة:", [
+    "1. تحليل نفسي وشخصي",
+    "2. شرح الأشياء المحيطة",
+    "3. إظهار عوائق الطريق والمخاطر",
+    "4. كشف الأشخاص (نظام رادار)",
+    "5. معرفة موديل المركبة ونوعها ولونها"
+])
 
 image_file = st.camera_input("التقط صورة بالكاميرا")
 
 if image_file and api_key:
+    # إعداد الاتصال والمعالجة بشكل مباشر بدون تعليق
+    genai.configure(api_key=api_key)
+    
     try:
-        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
         
-        # استخدام إعدادات تسريع الاستجابة وضغط الصورة لتطير بالسرعة
-        model = genai.GenerativeModel("gemini-3.6-flash")
-        
-        # فتح وضغط الصورة لترسل للنموذج بأسرع وقت ممكن وبدون حجم ثقيل
+        # تصغير الصورة لضمان السرعة الفورية
         img = Image.open(image_file)
-        img.thumbnail((640, 640)) # ضغط الأبعاد لسرعة خارقة
-        
+        img.thumbnail((400, 400))
         buffered = io.BytesIO()
-        img.save(buffered, format="JPEG", quality=80)
+        img.save(buffered, format="JPEG", quality=60)
         img_bytes = buffered.getvalue()
 
-        image_parts = [
-            {
-                "mime_type": "image/jpeg",
-                "data": img_bytes
-            }
-        ]
+        image_parts = [{"mime_type": "image/jpeg", "data": img_bytes}]
 
         if "1." in hud_mode:
-            prompt = "حلل الحالة النفسية والمزاج في سطرين بحد أقصى وبدون مقدمات."
+            prompt = "حلل المزاج والحالة النفسية في سطر واحد مختصر جداً."
             mode_title = "PSYCHOLOGICAL SCANNER"
         elif "2." in hud_mode:
-            prompt = "اذكر أهم الأشياء في الصورة في سطرين باختصار شديد."
+            prompt = "اذكر أهم الأشياء الظاهرة في الصورة باختصار في سطر واحد."
             mode_title = "OBJECT EXPLAINER"
         elif "3." in hud_mode:
-            prompt = "حدد المخاطر أو العوائق في الصورة إن وجدت باختصار شديد."
+            prompt = "هل هناك عوائق أو مخاطر في الطريق؟ اذكرها باختصار أو قل لا توجد."
             mode_title = "HAZARD DETECTOR"
         elif "4." in hud_mode:
-            prompt = "حدد عدد الأشخاص ومواقعهم باختصار شديد كأنك رادار."
-            mode_title = "RADAR / PEOPLE TRACKER"
+            prompt = "حدد عدد الأشخاص ومواقعهم باختصار شديد."
+            mode_title = "RADAR TRACKER"
         else:
-            prompt = "اذكر موديل المركبة، لونها، ونوعها باختصار، وإن لم توجد قل لا توجد مركبة."
+            prompt = "اذكر موديل المركبة ولونها باختصار، أو قل لا توجد مركبة."
             mode_title = "VEHICLE RECOGNITION"
 
-        with st.spinner("⚡ جاري التحليل الفوري..."):
-            response = model.generate_content([image_parts[0], prompt])
+        # تنفيذ الطلب مباشرة بدون st.spinner لتجنب أي تعليق في الواجهة
+        st.write("⚡ جاري إرسال البيانات للذكاء الاصطناعي...")
+        response = model.generate_content([image_parts[0], prompt])
 
+        if response and response.text:
             st.markdown(
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>{mode_title} [TURBO]</span>
-                        <span>11:02 AM 🔋</span>
+                        <span>{mode_title} [STABLE]</span>
+                        <span>5G 📶 | 37°C 🌡️ | 99% 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        STATUS: ULTRA-FAST [OK]
+                        STATUS: SUCCESS [OK]
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
+        else:
+            st.error("لم يتم استلام رد من النموذج، حاول مرة أخرى.")
 
     except Exception as e:
-        st.error(f"حدث خطأ أثناء المعالجة: {e}")
+        st.error(f"حدث خطأ أثناء الاتصال: {e}")
 
 elif not api_key and (image_file is not None):
     st.warning("الرجاء إدخال مفتاح Gemini API للمتابعة.")
