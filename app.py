@@ -59,11 +59,10 @@ st.markdown(
 st.title("👓 AR HUD Live Camera")
 st.write("التقط صورة بالكاميرا ليظهر التحليل بشكل عريض وواضح داخل واجهة النظارة.")
 
-# جلب مفتاح الـ API بأمان من متغيرات البيئة أو خانة الإدخال مباشرة
+# جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    # محاولة جلبها من الـ secrets بأمان بدون إيقاف التطبيق إذا لم تكن موجودة
     try:
         api_key = st.secrets.get("GEMINI_API_KEY")
     except Exception:
@@ -75,9 +74,10 @@ if not api_key:
 col1, col2 = st.columns([1, 1])
 
 with col1:
+    # تحديث أسماء النماذج لتكون متوافقة ومتاحة
     model_choice = st.selectbox(
         "اختر نموذج Gemini:",
-        ["gemini-2.5-flash", "gemini-2.5-pro"],
+        ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
         index=0,
     )
     image_file = st.camera_input("التقط صورة بالكاميرا")
@@ -88,7 +88,6 @@ with col2:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel(model_choice)
             
-            # قراءة الصورة لإرسالها للنموذج
             bytes_data = image_file.getvalue()
             image_parts = [
                 {
