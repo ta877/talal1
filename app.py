@@ -59,8 +59,15 @@ st.markdown(
 st.title("👓 AR HUD Live Camera")
 st.write("التقط صورة بالكاميرا ليظهر التحليل بشكل عريض وواضح داخل واجهة النظارة.")
 
-# إدخال مفتاح الـ API
-api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+# جلب مفتاح الـ API بأمان من متغيرات البيئة أو خانة الإدخال مباشرة
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    # محاولة جلبها من الـ secrets بأمان بدون إيقاف التطبيق إذا لم تكن موجودة
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY")
+    except Exception:
+        api_key = None
 
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
