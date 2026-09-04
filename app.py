@@ -58,8 +58,9 @@ st.markdown(
 )
 
 st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة لعرض التحليل المختصر داخل النظارة.")
+st.write("النظام يعمل الآن بكامل القوة: التقط الصورة وسيظهر التحليل فوراً.")
 
+# جلب المفتاح من نظام رندر أو تثبيته مباشرة لضمان عدم ضياعه عند التقاط الصورة
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     try:
@@ -67,8 +68,9 @@ if not api_key:
     except Exception:
         api_key = None
 
+# إذا ما لقاه، حط مفتاحك هنا مباشرة بين القوسين عشان يشتغل معك بلا مشاكل
 if not api_key:
-    api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
+    api_key = "ضع_مفتاحك_هنا_إذا_لم_تضعه_في_رندر" 
 
 hud_mode = st.selectbox("اختر وضع نظام النظارة:", [
     "1. تحليل نفسي وشخصي",
@@ -80,59 +82,61 @@ hud_mode = st.selectbox("اختر وضع نظام النظارة:", [
 
 image_file = st.camera_input("التقط صورة بالكاميرا")
 
-if image_file and api_key:
-    genai.configure(api_key=api_key)
-    
-    try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+if image_file:
+    if not api_key or api_key == "AQ.Ab8RN6J5FRJVpD1-ZarXFvI5iJtaXqzKxAw_TpznIqyP8Yh4EA":
+        st.error("الرجاء وضع مفتاح Gemini API الحقيقي داخل الكود أو في إعدادات رندر.")
+    else:
+        genai.configure(api_key=api_key)
         
-        img = Image.open(image_file)
-        img.thumbnail((320, 320))
-        buffered = io.BytesIO()
-        img.save(buffered, format="JPEG", quality=50)
-        img_bytes = buffered.getvalue()
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            img = Image.open(image_file)
+            img.thumbnail((320, 320))
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG", quality=50)
+            img_bytes = buffered.getvalue()
 
-        if "1." in hud_mode:
-            prompt = "Analyze this image and describe the mood or psychological state in one short sentence."
-            mode_title = "PSYCHOLOGICAL SCANNER"
-        elif "2." in hud_mode:
-            prompt = "What are the main objects visible in this image? Answer in one short sentence."
-            mode_title = "OBJECT EXPLAINER"
-        elif "3." in hud_mode:
-            prompt = "Are there any hazards or obstacles in this image? Answer briefly."
-            mode_title = "HAZARD DETECTOR"
-        elif "4." in hud_mode:
-            prompt = "Count the people and describe their positions briefly."
-            mode_title = "RADAR TRACKER"
-        else:
-            prompt = "Identify the vehicle model, color, and type if present. Answer briefly."
-            mode_title = "VEHICLE RECOGNITION"
+            if "1." in hud_mode:
+                prompt = "Analyze this image and describe the mood or psychological state in one short sentence in Arabic."
+                mode_title = "PSYCHOLOGICAL SCANNER"
+            elif "2." in hud_mode:
+                prompt = "What are the main objects visible in this image? Answer in one short sentence in Arabic."
+                mode_title = "OBJECT EXPLAINER"
+            elif "3." in hud_mode:
+                prompt = "Are there any hazards or obstacles in this image? Answer briefly in Arabic."
+                mode_title = "HAZARD DETECTOR"
+            elif "4." in hud_mode:
+                prompt = "Count the people and describe their positions briefly in Arabic."
+                mode_title = "RADAR TRACKER"
+            else:
+                prompt = "Identify the vehicle model, color, and type if present. Answer briefly in Arabic."
+                mode_title = "VEHICLE RECOGNITION"
 
-        response = model.generate_content([prompt, img])
+            # استخدام الـ image_parts المباشرة لضمان نجاح الإرسال بدون أخطاء
+            image_part = {"mime_type": "image/jpeg", "data": img_bytes}
+            response = model.generate_content([prompt, image_part])
 
-        if response and response.text:
-            st.markdown(
-                f"""
-                <div class="hud-container">
-                    <div class="hud-header">
-                        <span>{mode_title} [ACTIVE]</span>
-                        <span>5G 📶 | 37°C 🌡️ | 99% 🔋</span>
+            if response and response.text:
+                st.markdown(
+                    f"""
+                    <div class="hud-container">
+                        <div class="hud-header">
+                            <span>{mode_title} [ACTIVE]</span>
+                            <span>5G 📶 | 37°C 🌡️ | 99% 🔋</span>
+                        </div>
+                        <div class="hud-content">
+                            {response.text}
+                        </div>
+                        <div class="hud-footer">
+                            STATUS: SUCCESS [OK]
+                        </div>
                     </div>
-                    <div class="hud-content">
-                        {response.text}
-                    </div>
-                    <div class="hud-footer">
-                        STATUS: SUCCESS [OK]
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.warning("لم يتم استلام رد، حاول التقاط صورة واضحة مرة أخرى.")
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.warning("لم يتم استلام رد من الذكاء الاصطناعي، حاول مرة أخرى.")
 
-    except Exception as e:
-        st.error(f"حدث خطأ في الاتصال: {e}")
-
-elif not api_key and (image_file is not None):
-    st.warning("الرجاء إدخال مفتاح Gemini API للمتابعة.")
+        except Exception as e:
+           st.error(f"حدث خطأ أثناء الاتصال: {e}")
