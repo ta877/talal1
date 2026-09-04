@@ -58,7 +58,7 @@ st.markdown(
 )
 
 st.title("👓 AR HUD Smart Glasses")
-st.write("اختر الوضع، ثم التقط الصورة ليظهر التحليل فوراً.")
+st.write("نظام النظارة الذكية: التقط الصورة وسيظهر التحليل فوراً.")
 
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
@@ -70,7 +70,6 @@ if not api_key:
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
 
-# قائمة بسيطة ومستقرة بدون أي تعليق
 hud_mode = st.selectbox("اختر وضع نظام النظارة:", [
     "1. تحليل نفسي وشخصي",
     "2. شرح الأشياء المحيطة",
@@ -87,7 +86,6 @@ if image_file and api_key:
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
         
-        # تصضغط الصورة لتطير بالسرعة
         img = Image.open(image_file)
         img.thumbnail((320, 320))
         buffered = io.BytesIO()
@@ -112,7 +110,6 @@ if image_file and api_key:
             prompt = "اذكر موديل المركبة ولونها باختصار، أو قل لا توجد مركبة."
             mode_title = "VEHICLE RECOGNITION"
 
-        # تنفيذ مباشر بدون أي دوران معلق
         response = model.generate_content([image_parts[0], prompt])
 
         if response and response.text:
@@ -120,7 +117,7 @@ if image_file and api_key:
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>{mode_title} [TURBO]</span>
+                        <span>{mode_title} [ULTRA-FAST]</span>
                         <span>5G 📶 | 37°C 🌡️ | 99% 🔋</span>
                     </div>
                     <div class="hud-content">
