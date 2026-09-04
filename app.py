@@ -18,35 +18,35 @@ st.markdown(
         background: linear-gradient(135deg, rgba(13, 27, 42, 0.9), rgba(20, 35, 60, 0.8));
         border: 2px solid #1e90ff;
         border-radius: 16px;
-        padding: 25px;
+        padding: 20px;
         color: #ffffff;
         font-family: 'Courier New', Courier, monospace;
         box-shadow: 0 0 25px rgba(30, 144, 255, 0.4);
-        margin-top: 20px;
-        margin-bottom: 20px;
+        margin-top: 15px;
+        margin-bottom: 15px;
         width: 100%;
     }
     .hud-header {
         display: flex;
         justify-content: space-between;
         color: #00d2ff;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1.5px;
         border-bottom: 1px solid rgba(30, 144, 255, 0.3);
-        padding-bottom: 8px;
-        margin-bottom: 15px;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
     }
     .hud-content {
-        font-size: 17px;
-        line-height: 1.8;
+        font-size: 16px;
+        line-height: 1.5;
         color: #e0f7ff;
         white-space: pre-wrap;
     }
     .hud-footer {
-        margin-top: 15px;
-        font-size: 12px;
+        margin-top: 12px;
+        font-size: 11px;
         color: #00ffcc;
         text-align: right;
         letter-spacing: 1px;
@@ -57,7 +57,7 @@ st.markdown(
 )
 
 st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة بالكاميرا لعرض التحليل النفسي وساترك الموقف الذكي داخل النظارة.")
+st.write("التقط صورة لعرض التحليل المختصر داخل النظارة.")
 
 # جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
@@ -87,15 +87,11 @@ if image_file and api_key:
             }
         ]
 
-        with st.spinner("جاري تحليل الحالة النفسية والموقع..."):
-            # برومبت يخلي الذكاء الاصطناعي يعطي خيارات تحليل سلوكي ونفسي مبهرة
+        with st.spinner("جاري التحليل..."):
+            # برومبت صارم جداً يمنع التفاصيل الطويلة ويخليه سطر واحد مركز
             prompt = (
-                "قم بتحليل الصورة كأنك نظارة ذكية متقدمة تفحص الحالة والمحيط. "
-                "أعطني النتيجة بشكل خيارات وتقاطيع واضحة كالتالي: "
-                "1. الحالة النفسية / المزاج: [...] "
-                "2. وصف الموقف أو البيئة: [...] "
-                "3. تقييم الطاقة التركيزية: [...] "
-                "كن مختصراً جداً ومرتباً وبدون مقدمات."
+                "أعطني تحليلاً مختصراً جداً من سطر واحد فقط (مثال: المزاج: هادئ | البيئة: غرفة داخلية). "
+                "لا تكتب فقرات طويلة أبداً، فقط كلمات مركزة ومختصرة جداً لتظهر في شاشة نظارة ذكية."
             )
 
             response = model.generate_content([image_parts[0], prompt])
@@ -104,14 +100,14 @@ if image_file and api_key:
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>PSYCH & ENV SCANNER / AI HUD</span>
+                        <span>HUD SCANNER / ACTIVE</span>
                         <span>10:42 AM 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        STATUS: ANALYZED [SUCCESS]
+                        STATUS: OK [LOCKED]
                     </div>
                 </div>
                 """,
