@@ -39,7 +39,7 @@ st.markdown(
         margin-bottom: 15px;
     }
     .hud-content {
-        font-size: 18px;
+        font-size: 17px;
         line-height: 1.8;
         color: #e0f7ff;
         white-space: pre-wrap;
@@ -57,7 +57,7 @@ st.markdown(
 )
 
 st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة بالكاميرا ليظهر التحليل المختصر داخل واجهة النظارة.")
+st.write("التقط صورة بالكاميرا لعرض التحليل النفسي وساترك الموقف الذكي داخل النظارة.")
 
 # جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
@@ -87,11 +87,15 @@ if image_file and api_key:
             }
         ]
 
-        with st.spinner("جاري التحليل السريع..."):
-            # تم تعديل التوجيه ليكون سطر واحد بسيط ومباشر بدون رغي
+        with st.spinner("جاري تحليل الحالة النفسية والموقع..."):
+            # برومبت يخلي الذكاء الاصطناعي يعطي خيارات تحليل سلوكي ونفسي مبهرة
             prompt = (
-                "اعطني اسم الشيء أو الشخص الموجود في الصورة بشكل مختصر جداً في سطر واحد أو كلمات معدودة "
-                "(مثلاً: شخص، كنب، طاولة، جوال) وبدون أي مقدمات أو شرح طويل."
+                "قم بتحليل الصورة كأنك نظارة ذكية متقدمة تفحص الحالة والمحيط. "
+                "أعطني النتيجة بشكل خيارات وتقاطيع واضحة كالتالي: "
+                "1. الحالة النفسية / المزاج: [...] "
+                "2. وصف الموقف أو البيئة: [...] "
+                "3. تقييم الطاقة التركيزية: [...] "
+                "كن مختصراً جداً ومرتباً وبدون مقدمات."
             )
 
             response = model.generate_content([image_parts[0], prompt])
@@ -100,14 +104,14 @@ if image_file and api_key:
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>TARGET LOCKED / OBJECT RECOGNITION</span>
+                        <span>PSYCH & ENV SCANNER / AI HUD</span>
                         <span>10:42 AM 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        HUD — ACTIVE [OK]
+                        STATUS: ANALYZED [SUCCESS]
                     </div>
                 </div>
                 """,
