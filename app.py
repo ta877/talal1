@@ -1,140 +1,146 @@
 import os
-import streamlit as st
-import google.generativeai as genai
+from flask import Flask, render_template_string, request, jsonify
+from google import genai
+from google.genai import types
 from PIL import Image
 import io
+import base64
 
-st.set_page_config(
-    page_title="AR HUD Smart Glasses", page_icon="👓", layout="wide"
-)
+app = Flask(__name__)
 
-st.markdown(
-    """
+# قالب الصفحة الواحدة (Frontend + Backend في ملف واحد لسهولة الاستخدام)
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera - تحليل النظارة</title>
     <style>
-    .stApp {
-        background-color: #0b0e14;
-    }
-    .hud-container {
-        position: relative;
-        background: linear-gradient(135deg, rgba(13, 27, 42, 0.95), rgba(20, 35, 60, 0.85));
-        border: 2px solid #1e90ff;
-        border-radius: 16px;
-        padding: 22px;
-        color: #ffffff;
-        font-family: 'Courier New', Courier, monospace;
-        box-shadow: 0 0 30px rgba(30, 144, 255, 0.5);
-        margin-top: 15px;
-        margin-bottom: 15px;
-        width: 100%;
-    }
-    .hud-header {
-        display: flex;
-        justify-content: space-between;
-        color: #00d2ff;
-        font-size: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        border-bottom: 1px solid rgba(30, 144, 255, 0.4);
-        padding-bottom: 6px;
-        margin-bottom: 12px;
-    }
-    .hud-content {
-        font-size: 16px;
-        line-height: 1.7;
-        color: #e0f7ff;
-        white-space: pre-wrap;
-    }
-    .hud-footer {
-        margin-top: 12px;
-        font-size: 11px;
-        color: #00ffcc;
-        text-align: right;
-        letter-spacing: 1px;
-    }
+        body { background-color: #121212; color: #ffffff; font-family: Tahoma, sans-serif; text-align: center; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #444; background: #2a2a2a; color: #fff; }
+        button { background: #007bff; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #result { margin-top: 20px; padding: 15px; background: #252525; border-radius: 5px; text-align: right; white-space: pre-wrap; }
+        .preview { max-width: 100%; height: auto; border-radius: 5px; margin-top: 10px; }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة لعرض التحليل المختصر داخل النظارة.")
-
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    try:
-        api_key = st.secrets.get("GEMINI_API_KEY")
-    except Exception:
-        api_key = None
-
-if not api_key:
-    api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
-
-hud_mode = st.selectbox("اختر وضع نظام النظارة:", [
-    "1. تحليل نفسي وشخصي",
-    "2. شرح الأشياء المحيطة",
-    "3. إظهار عوائق الطريق والمخاطر",
-    "4. كشف الأشخاص (نظام رادار)",
-    "5. معرفة موديل المركبة ونوعها ولونها"
-])
-
-image_file = st.camera_input("التقط صورة بالكاميرا")
-
-if image_file and api_key:
-    genai.configure(api_key=api_key)
-    
-    try:
-        # استخدام إعدادات واضحة للموديل لضمان إرجاع النص مباشرة
-        model = genai.GenerativeModel("gemini-1.5-flash")
+</head>
+<body>
+    <div class="container">
+        <h2>Live Camera Analysis</h2>
+        <p>التقط صورة أو ارفعها لعرض التحليل المختصر:</p>
         
-        img = Image.open(image_file)
-        img.thumbnail((320, 320))
-        buffered = io.BytesIO()
-        img.save(buffered, format="JPEG", quality=50)
-        img_bytes = buffered.getvalue()
+        <label>Gemini API Key:</label>
+        <input type="password" id="apiKey" placeholder="أدخل مفتاح الـ API هنا">
 
-        if "1." in hud_mode:
-            prompt = "Analyze this image and describe the mood or psychological state in one short sentence."
-            mode_title = "PSYCHOLOGICAL SCANNER"
-        elif "2." in hud_mode:
-            prompt = "What are the main objects visible in this image? Answer in one short sentence."
-            mode_title = "OBJECT EXPLAINER"
-        elif "3." in hud_mode:
-            prompt = "Are there any hazards or obstacles in this image? Answer briefly."
-            mode_title = "HAZARD DETECTOR"
-        elif "4." in hud_mode:
-            prompt = "Count the people and describe their positions briefly."
-            mode_title = "RADAR TRACKER"
-        else:
-            prompt = "Identify the vehicle model, color, and type if present. Answer briefly."
-            mode_title = "VEHICLE RECOGNITION"
+        <label>اختر وضع نظام النظارة:</label>
+        <select id="mode">
+            <option value="تحليل نفسي وشخصي">1. تحليل نفسي وشخصي</option>
+            <option value="تحليل عام ومحيطي">2. تحليل عام ومحيطي</option>
+        </select>
 
-        # إرسال الصورة والطلب معاً بالشكل الصحيح 100%
-        response = model.generate_content([prompt, img])
+        <label>اختر صورة:</label>
+        <input type="file" id="imageInput" accept="image/*" onchange="previewImage(event)">
+        <br>
+        <img id="imagePreview" class="preview" style="display:none;">
+        
+        <button onclick="analyzeImage()">بدء التحليل</button>
 
-        if response and response.text:
-            st.markdown(
-                f"""
-                <div class="hud-container">
-                    <div class="hud-header">
-                        <span>{mode_title} [ACTIVE]</span>
-                        <span>5G 📶 | 37°C 🌡️ | 99% 🔋</span>
-                    </div>
-                    <div class="hud-content">
-                        {response.text}
-                    </div>
-                    <div class="hud-footer">
-                        STATUS: SUCCESS [OK]
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.warning("لم يتم استلام رد، حاول التقاط صورة واضحة مرة أخرى.")
+        <h3>النتيجة:</h3>
+        <div id="result">في انتظار التحليل...</div>
+    </div>
+
+    <script>
+        let base64Image = "";
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    base64Image = e.target.result;
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = base64Image;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function analyzeImage() {
+            const apiKey = document.getElementById('apiKey').value;
+            const mode = document.getElementById('mode').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!apiKey) {
+                alert('الرجاء إدخال مفتاح الـ API');
+                return;
+            }
+            if (!base64Image) {
+                alert('الرجاء اختيار صورة أولاً');
+                return;
+            }
+
+            resultDiv.innerText = "جاري تحليل الصورة، يرجى الانتظار...";
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey, mode, image: base64Image })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    resultDiv.innerText = data.result;
+                } else {
+                    resultDiv.innerText = "خطأ: " + data.error;
+                }
+            } catch (err) {
+                resultDiv.innerText = "حدث خطأ في الاتصال بالسيرفر: " + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_TEMPLATE)
+
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    try:
+        data = request.json
+        api_key = data.get('apiKey')
+        mode = data.get('mode')
+        image_data = data.get('image')
+
+        if not api_key or not image_data:
+            return jsonify({'success': False, 'error': 'المفتاح أو الصورة غير متوفرة'})
+
+        # فصل رأس الـ Base64 عن البيانات الفعلية للصورة
+        header, encoded = image_data.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+        image = Image.open(io.BytesIO(image_bytes))
+
+        # تهيئة عميل Google GenAI بالطريقة الحديثة
+        client = genai.Client(api_key=api_key)
+
+        prompt = f"قم بتحليل هذه الصورة بناءً على الوضع التالي: {mode}. اعطني نتيجة مختصرة ومفيدة باللغة العربية."
+
+        # استدعاء الموديل الصحيح والسريع
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[image, prompt]
+        )
+
+        return jsonify({'success': True, 'result': response.text})
 
     except Exception as e:
-        st.error(f"حدث خطأ في الاتصال: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
-elif not api_key and (image_file is not None):
-    st.warning("الرجاء إدخال مفتاح Gemini API للمتابعة.")
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
