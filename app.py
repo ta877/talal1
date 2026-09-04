@@ -71,15 +71,14 @@ if not api_key:
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
 
-# زر أو خيار الكاميرا بشكل مباشر وواضح للشاشة الكاملة
 image_file = st.camera_input("التقط صورة بالكاميرا")
 
 if image_file and api_key:
     try:
         genai.configure(api_key=api_key)
         
-        # استخدام النموذج الأساسي المعتمد للصور
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        # استخدام النموذج المحدث المطلوب من المنصة
+        model = genai.GenerativeModel("gemini-3.6-flash")
         
         bytes_data = image_file.getvalue()
         image_parts = [
@@ -98,7 +97,6 @@ if image_file and api_key:
 
             response = model.generate_content([image_parts[0], prompt])
 
-            # عرض النتائج في شاشة النظارة الواضحة تحت الصورة مباشرة
             st.markdown(
                 f"""
                 <div class="hud-container">
