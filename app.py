@@ -1,6 +1,8 @@
 import os
 import streamlit as st
 import google.generativeai as genai
+from PIL import Image
+import io
 
 # تكبير الشاشة لتستغل المساحة الكاملة للمتصفح
 st.set_page_config(
@@ -56,8 +58,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("👓 AR HUD Smart Glasses")
-st.write("اختر وضع التحليل من القائمة، ثم التقط الصورة ليظهر في واجهة النظارة.")
+st.title("👓 AR HUD Smart Glasses (Turbo)")
+st.write("وضع السرعة القصوى: اختر الوضع والتقط الصورة لتحليل فوري.")
 
 # جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
@@ -71,7 +73,6 @@ if not api_key:
 if not api_key:
     api_key = st.text_input("أدخل مفتاح Gemini API:", type="password")
 
-# قائمة الخيارات المتقدمة للنظارة
 hud_mode = st.selectbox(
     "اختر وضع نظام النظارة:",
     [
@@ -89,48 +90,55 @@ if image_file and api_key:
     try:
         genai.configure(api_key=api_key)
         
+        # استخدام إعدادات تسريع الاستجابة وضغط الصورة لتطير بالسرعة
         model = genai.GenerativeModel("gemini-3.6-flash")
         
-        bytes_data = image_file.getvalue()
+        # فتح وضغط الصورة لترسل للنموذج بأسرع وقت ممكن وبدون حجم ثقيل
+        img = Image.open(image_file)
+        img.thumbnail((640, 640)) # ضغط الأبعاد لسرعة خارقة
+        
+        buffered = io.BytesIO()
+        img.save(buffered, format="JPEG", quality=80)
+        img_bytes = buffered.getvalue()
+
         image_parts = [
             {
                 "mime_type": "image/jpeg",
-                "data": bytes_data
+                "data": img_bytes
             }
         ]
 
-        # تخصيص البرومبت بناءً على الخيار اللي اختاره
         if "1." in hud_mode:
-            prompt = "قم بتحليل الشخص في الصورة تحليلاً نفسياً وسلوكياً سريعاً في نقطتين أو ثلاث مختصرة جداً."
+            prompt = "حلل الحالة النفسية والمزاج في سطرين بحد أقصى وبدون مقدمات."
             mode_title = "PSYCHOLOGICAL SCANNER"
         elif "2." in hud_mode:
-            prompt = "اشرح أهم الأشياء والمعالم الظاهرة في الصورة باختصار شديد في سطرين."
+            prompt = "اذكر أهم الأشياء في الصورة في سطرين باختصار شديد."
             mode_title = "OBJECT EXPLAINER"
         elif "3." in hud_mode:
-            prompt = "حدد أي عوائق أو مخاطر محتملة في طريق أو محيط الصورة بشكل تحذيري مختصر."
-            mode_title = "HAZARD & OBSTACLE DETECTOR"
+            prompt = "حدد المخاطر أو العوائق في الصورة إن وجدت باختصار شديد."
+            mode_title = "HAZARD DETECTOR"
         elif "4." in hud_mode:
-            prompt = "اكشف عن وجود الأشخاص في الصورة وعددهم ومواقعهم كأنك نظام رادار بأسلوب مختصر."
+            prompt = "حدد عدد الأشخاص ومواقعهم باختصار شديد كأنك رادار."
             mode_title = "RADAR / PEOPLE TRACKER"
         else:
-            prompt = "إذا كانت هناك سيارة أو مركبة في الصورة، حدد موديلها ونوعها ولونها ولوحتها بدقة. إذا لم توجد قل لا توجد مركبة."
-            mode_title = "VEHICLE RECOGNITION HUD"
+            prompt = "اذكر موديل المركبة، لونها، ونوعها باختصار، وإن لم توجد قل لا توجد مركبة."
+            mode_title = "VEHICLE RECOGNITION"
 
-        with st.spinner("جاري معالجة نظام النظارة..."):
+        with st.spinner("⚡ جاري التحليل الفوري..."):
             response = model.generate_content([image_parts[0], prompt])
 
             st.markdown(
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>{mode_title}</span>
-                        <span>10:56 AM 🔋</span>
+                        <span>{mode_title} [TURBO]</span>
+                        <span>11:02 AM 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        STATUS: ACTIVE [OK]
+                        STATUS: ULTRA-FAST [OK]
                     </div>
                 </div>
                 """,
