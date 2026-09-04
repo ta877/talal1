@@ -74,15 +74,28 @@ if not api_key:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    # التقاط الصورة مباشرة بدون زحمة خيارات النماذج
     image_file = st.camera_input("التقط صورة بالكاميرا")
 
 with col2:
     if image_file and api_key:
         try:
             genai.configure(api_key=api_key)
-            # استخدام النموذج الأقر والجاهز لمعالجة الصور مباشرة
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            
+            # البحث التلقائي عن أي نموذج يدعم توليد المحتوى من الصور بدون تحديد اسم ثابت
+            selected_model_name = None
+            for m in genai.list_models():
+                if "generateContent" in m.supported_generation_methods:
+                    # نفضل النماذج السريعة مثل flash إذا توفرت
+                    if "flash" in m.name:
+                        selected_model_name = m.name
+                        break
+                    elif not selected_model_name:
+                        selected_model_name = m.name
+
+            if not selected_model_name:
+                selected_model_name = "models/gemini-1.5-flash"
+
+            model = genai.GenerativeModel(selected_model_name)
             
             bytes_data = image_file.getvalue()
             image_parts = [
@@ -92,7 +105,7 @@ with col2:
                 }
             ]
 
-            with st.spinner("جاري التحليل وعرض البيانات..."):
+            with st.spinner(f"جاري التحليل باستخدام ({selected_model_name})..."):
                 prompt = (
                     "قم بتحليل الصورة بدقة تامة. أخرج النتيجة بشكل تعداد مختصر ونظيف جداً "
                     "(مثال: 1. [اسم العنصر] — [العدد أو الوصف]). "
