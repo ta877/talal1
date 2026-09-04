@@ -57,7 +57,7 @@ st.markdown(
 )
 
 st.title("👓 AR HUD Live Camera")
-st.write("التقط صورة بالكاميرا ليظهر التحليل بشكل فوري داخل واجهة النظارة.")
+st.write("التقط صورة بالكاميرا ليظهر التحليل المختصر داخل واجهة النظارة.")
 
 # جلب مفتاح الـ API بأمان
 api_key = os.getenv("GEMINI_API_KEY")
@@ -77,7 +77,6 @@ if image_file and api_key:
     try:
         genai.configure(api_key=api_key)
         
-        # استخدام النموذج المحدث المطلوب من المنصة
         model = genai.GenerativeModel("gemini-3.6-flash")
         
         bytes_data = image_file.getvalue()
@@ -88,11 +87,11 @@ if image_file and api_key:
             }
         ]
 
-        with st.spinner("جاري التحليل وعرض البيانات على النظارة..."):
+        with st.spinner("جاري التحليل السريع..."):
+            # تم تعديل التوجيه ليكون سطر واحد بسيط ومباشر بدون رغي
             prompt = (
-                "قم بتحليل الصورة بدقة تامة. أخرج النتيجة بشكل تعداد مختصر ونظيف جداً "
-                "(مثال: 1. [اسم العنصر] — [العدد أو الوصف]). "
-                "ممنوع نهائياً كتابة مقدمات أو شرح طويل، فقط العناصر والنتيجة مباشرة."
+                "اعطني اسم الشيء أو الشخص الموجود في الصورة بشكل مختصر جداً في سطر واحد أو كلمات معدودة "
+                "(مثلاً: شخص، كنب، طاولة، جوال) وبدون أي مقدمات أو شرح طويل."
             )
 
             response = model.generate_content([image_parts[0], prompt])
@@ -101,14 +100,14 @@ if image_file and api_key:
                 f"""
                 <div class="hud-container">
                     <div class="hud-header">
-                        <span>OBJECT DETECTED / COUNTING INTERFACE</span>
+                        <span>TARGET LOCKED / OBJECT RECOGNITION</span>
                         <span>10:42 AM 🔋</span>
                     </div>
                     <div class="hud-content">
                         {response.text}
                     </div>
                     <div class="hud-footer">
-                        NE — E [INVENTORY COUNT]
+                        HUD — ACTIVE [OK]
                     </div>
                 </div>
                 """,
